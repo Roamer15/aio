@@ -27,6 +27,7 @@ export interface MetaSuggestion {
     src: string;
     alt: string;
   }>;
+  source: 'ai-suggestion';
 }
 
 export interface LocalBusinessJsonLd {

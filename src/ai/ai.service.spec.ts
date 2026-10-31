@@ -88,6 +88,7 @@ describe('AiService', () => {
       title: 'Hôtel du Littoral à Kribi',
       description: 'Découvrez cet hôtel situé à Kribi.',
       imageAltTexts: [{ src: '/hotel.jpg', alt: 'Façade de l’hôtel à Kribi' }],
+      source: 'ai-suggestion',
     });
 
     const [request] = mockGenerateContent.mock.calls[0];
@@ -96,6 +97,15 @@ describe('AiService', () => {
       'Write every generated value in French.',
     );
     expect(request.config).toEqual({ responseMimeType: 'application/json' });
+  });
+
+  it('reuses a valid response for an identical metadata request', async () => {
+    const service = new AiService();
+
+    await service.generateMeta(input);
+    await service.generateMeta(input);
+
+    expect(mockGenerateContent).toHaveBeenCalledTimes(1);
   });
 
   it('rejects empty page content without calling Gemini', async () => {
@@ -140,6 +150,21 @@ describe('AiService', () => {
     await expect(service.generateMeta(input)).rejects.toBeInstanceOf(
       InternalServerErrorException,
     );
+
+    mockGenerateContent.mockResolvedValueOnce({
+      text: JSON.stringify({
+        title: 'Titre',
+        description: 'Description',
+        imageAltTexts: [
+          { src: '/hotel.jpg', alt: 'Façade de l’hôtel à Kribi' },
+        ],
+      }),
+    });
+    await expect(service.generateMeta(input)).resolves.toMatchObject({
+      title: 'Titre',
+      source: 'ai-suggestion',
+    });
+    expect(mockGenerateContent).toHaveBeenCalledTimes(2);
   });
 
   it('creates LocalBusiness JSON-LD only from confirmed business fields', () => {

@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
+import { createHash } from 'node:crypto';
 import {
   FindingForPrioritization,
   FindingPriority,
@@ -17,14 +18,17 @@ import {
 @Injectable()
 export class AiService {
   private client?: GoogleGenAI;
+  private readonly responseCache = new Map<string, string>();
+  private readonly maxCachedResponses = 32;
 
   async generateMeta(input: GenerateMetaInput): Promise<MetaSuggestion> {
     if (!input.pageContent.trim()) {
       throw new BadRequestException('Page content must not be empty.');
     }
 
-    const responseText = await this.generateJson(this.buildPrompt(input));
-    return this.parseResponse(responseText, input.images ?? []);
+    return this.generateJson(this.buildPrompt(input), (responseText) =>
+      this.parseResponse(responseText, input.images ?? []),
+    );
   }
 
   generateLocalBusinessJsonLd(
@@ -64,26 +68,50 @@ export class AiService {
       return [];
     }
 
-    const responseText = await this.generateJson(
-      this.buildPriorityPrompt(input),
+    return this.generateJson(this.buildPriorityPrompt(input), (responseText) =>
+      this.parsePriorities(responseText, input.findings),
     );
-    return this.parsePriorities(responseText, input.findings);
   }
 
-  private async generateJson(contents: string): Promise<string> {
+  private async generateJson<T>(
+    contents: string,
+    parse: (responseText: string) => T,
+  ): Promise<T> {
+    const model = this.getModel();
+    const cacheKey = createHash('sha256')
+      .update(model)
+      .update('\0')
+      .update(contents)
+      .digest('hex');
+    const cachedResponse = this.responseCache.get(cacheKey);
+    if (cachedResponse !== undefined) {
+      this.responseCache.delete(cacheKey);
+      this.responseCache.set(cacheKey, cachedResponse);
+      return parse(cachedResponse);
+    }
+
     const response = await this.getClient().models.generateContent({
-      model: this.getModel(),
+      model,
       contents,
       config: { responseMimeType: 'application/json' },
     });
 
-    if (!response.text) {
+    const responseText = String(response.text ?? '');
+    if (!responseText.trim()) {
       throw new InternalServerErrorException(
         'Gemini returned an empty response.',
       );
     }
 
-    return response.text;
+    const result = parse(responseText);
+    if (this.responseCache.size >= this.maxCachedResponses) {
+      const oldestEntry = this.responseCache.keys().next();
+      if (!oldestEntry.done) {
+        this.responseCache.delete(oldestEntry.value);
+      }
+    }
+    this.responseCache.set(cacheKey, responseText);
+    return result;
   }
 
   private getModel(): string {
@@ -205,6 +233,7 @@ export class AiService {
           alt: alt.trim(),
         }),
       ),
+      source: 'ai-suggestion',
     };
   }
 
