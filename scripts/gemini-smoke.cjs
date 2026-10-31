@@ -1,6 +1,6 @@
 const { NestFactory } = require('@nestjs/core');
-const { AiService } = require('../dist/ai/ai.service');
-const { AppModule } = require('../dist/app.module');
+const { AiService } = require('../dist/src/ai/ai.service');
+const { AppModule } = require('../dist/src/app.module');
 
 async function main() {
   const app = await NestFactory.createApplicationContext(AppModule, {
