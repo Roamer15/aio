@@ -1,8 +1,6 @@
 /**
  * Shared contracts for LocalSEO AI.
  *
- * These types are frozen first (per the plan's first 20 minutes) so every
- * module can build against them in parallel.
  *
  * Data provenance rule: everything is labelled as measured (deterministic
  * tool output), client (from business.json / the user) or ai-suggestion
@@ -36,7 +34,7 @@ export interface AuditResult {
 export interface Fix {
   findingId: string;
   file: string;
-  diff: string; // displayed before validation
+  diff: string;
   source: SourceKind;
 }
 
