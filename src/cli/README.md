@@ -4,27 +4,22 @@ This directory contains the CLI tools for demonstrating LocalSEO AI capabilities
 
 ## Running the Audit
 
-### From development
+### Run the TypeScript CLI
 ```bash
-pnpm run audit:dev ./path/to/site
-pnpm run audit:dev https://example.com
-```
-
-### From production build
-```bash
-pnpm run audit ./path/to/site
-pnpm run audit https://example.com
+pnpm run audit:cli -- ./path/to/site
+pnpm run audit:cli -- ./path/to/site fr,en
+pnpm run audit:cli -- https://example.com
 ```
 
 ## Audit Command Options
 
 - **Target**: Required - Either a folder path (e.g., `./site`) or a URL (e.g., `https://example.com`)
-- **Languages**: Optional - Comma-separated list of languages (default: `fr,en`)
+- **Languages**: Optional - Comma-separated list of known target languages (`fr`, `en`). The `hreflang` rule is skipped unless multiple languages are provided.
 
 ## What it does
 
 The audit command:
-1. Loads pages from the target (remote URL or local folder)
+1. Loads one remote page or up to 50 HTML files from a local folder
 2. Performs deterministic SEO analysis using 11 rules
 3. Generates an indicative score (0-100)
 4. Outputs findings with measured evidence
@@ -35,7 +30,7 @@ The audit outputs:
 - **Score**: A numerical rating (higher is better)
 - **Findings**: List of detected issues with severity level (🔴 high, 🟡 medium, 🟢 low)
 - **Evidence**: Measured proof for each finding (counts, file paths, etc.)
-- **File references**: Where the issue was found
+- **File or URL references**: The local file or remote URL where the issue was found
 
 ## Example Output
 
@@ -84,10 +79,6 @@ EOF
 
 pnpm run audit:dev ./test-site
 ```
-
-## Integration with MLH
-
-The audit tools can be integrated with the MLH MCP server for automated reporting and submission.
 
 ## Important
 

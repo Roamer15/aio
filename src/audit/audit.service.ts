@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { stat } from 'node:fs/promises';
+import * as path from 'node:path';
 import { AuditResult, Finding, Severity } from '../shared';
-import { ExtractorService, PageSignals, SiteSignals } from './extractor.service';
-import { FetcherService, LoadedPage } from './fetcher.service';
+import {
+  ExtractorService,
+  PageSignals,
+  SiteSignals,
+} from './extractor.service';
+import { FetcherService } from './fetcher.service';
 import { RulesService } from './rules.service';
 
 /** Options accepted by the audit entry point. */
@@ -10,7 +16,7 @@ export interface AuditOptions {
   url?: string;
   /** Local project folder to audit. */
   folder?: string;
-  /** Primary languages the site targets (default: French and English). */
+  /** Primary languages the site targets, when known. */
   languages?: ('fr' | 'en')[];
 }
 
@@ -36,18 +42,28 @@ export class AuditService {
    * rules, and compute the indicative score. No model involved.
    */
   async audit(options: AuditOptions): Promise<AuditResult> {
-    const { pages, siteRoot } = await this.fetcher.loadPages(options);
+    const { pages, siteRoot, rootDir } = await this.fetcher.loadPages(options);
+    if (pages.length === 0) throw new Error('No HTML files found to audit.');
     this.logger.log(`Auditing ${pages.length} page(s).`);
 
-    const languages = options.languages ?? ['fr', 'en'];
+    const languages = options.languages ?? [];
     const pageSignals = pages.map((page) => this.extractor.extract(page));
 
     const site: SiteSignals = siteRoot
       ? await this.fetchSiteSignals(siteRoot)
-      : await this.fetchFolderSiteSignals(pages);
-    const imageSizes = await this.measureImageSizes(pageSignals, siteRoot);
-    const findings = this.rules.apply({ pages: pageSignals, site, imageSizes, languages });
-    this.rules.applySiteRules({ pages: pageSignals, site, imageSizes, languages }, findings, pageSignals[0]?.file ?? pageSignals[0]?.pageUrl ?? '');
+      : await this.fetchFolderSiteSignals(rootDir);
+    const imageSizes = await this.measureImageSizes(pageSignals, siteRoot, rootDir);
+    const findings = this.rules.apply({
+      pages: pageSignals,
+      site,
+      imageSizes,
+      languages,
+    });
+    this.rules.applySiteRules(
+      { pages: pageSignals, site, imageSizes, languages },
+      findings,
+      rootDir ? { file: rootDir } : { url: siteRoot?.origin },
+    );
 
     const score = this.score(findings);
     return { score, findings };
@@ -55,26 +71,41 @@ export class AuditService {
 
   /** Re-score existing findings without re-crawling (cheap verification pass). */
   score(findings: Finding[]): number {
-    const penalty = findings.reduce((sum, f) => sum + (SEVERITY_PENALTY[f.severity] ?? 0), 0);
+    const penalty = findings.reduce(
+      (sum, f) => sum + (SEVERITY_PENALTY[f.severity] ?? 0),
+      0,
+    );
     return Math.max(0, Math.min(100, 100 - penalty));
   }
 
   private async fetchSiteSignals(siteRoot: URL): Promise<SiteSignals> {
     const [robotsTxt, sitemap] = await Promise.all([
-      this.fetcher.fetchSiteFile(siteRoot, 'robots.txt'),
-      this.fetcher.fetchSiteFile(siteRoot, 'sitemap.xml'),
+      this.fetcher.fetchSiteFile(siteRoot, '/robots.txt'),
+      this.fetcher.fetchSiteFile(siteRoot, '/sitemap.xml'),
     ]);
-    return { robotsTxtPresent: robotsTxt !== null, sitemapPresent: sitemap !== null };
+    return {
+      robotsTxtPresent: robotsTxt !== null,
+      sitemapPresent: sitemap !== null,
+    };
   }
 
-  private async fetchFolderSiteSignals(pages: LoadedPage[]): Promise<SiteSignals> {
-    const root = pages[0]?.file ? pages[0].file.replace(/[/\\][^/\\]+$/, '') : null;
-    if (!root) return { robotsTxtPresent: false, sitemapPresent: false };
-    const [robotsTxt, sitemap] = await Promise.all([
-      fsExists(`${root}/robots.txt`),
-      fsExists(`${root}/sitemap.xml`),
+  private async fetchFolderSiteSignals(
+    rootDir?: string,
+  ): Promise<SiteSignals> {
+    if (!rootDir) return { robotsTxtPresent: false, sitemapPresent: false };
+    const has = async (name: string) =>
+      (
+        await Promise.all(
+          [rootDir, path.join(rootDir, 'public')].map((directory) =>
+            fsExists(path.join(directory, name)),
+          ),
+        )
+      ).some(Boolean);
+    const [robotsTxtPresent, sitemapPresent] = await Promise.all([
+      has('robots.txt'),
+      has('sitemap.xml'),
     ]);
-    return { robotsTxtPresent: robotsTxt, sitemapPresent: sitemap };
+    return { robotsTxtPresent, sitemapPresent };
   }
 
   /**
@@ -82,31 +113,55 @@ export class AuditService {
    * images (mobile data is expensive), file stat for local ones. Sizes are
    * only reported when actually measured; nothing is invented.
    */
-  private async measureImageSizes(pageSignals: PageSignals[], siteRoot?: URL): Promise<Map<string, number>> {
+  private async measureImageSizes(
+    pageSignals: PageSignals[],
+    siteRoot?: URL,
+    rootDir?: string,
+  ): Promise<Map<string, number>> {
     const sizes = new Map<string, number>();
     const srcs = new Set(
-      pageSignals.flatMap((p) => p.images.map((img) => img.src)).filter((src) => src.length > 0),
+      pageSignals
+        .flatMap((p) => p.images.map((img) => img.src))
+        .filter((src) => src.length > 0),
     );
     const limited = [...srcs].slice(0, 20);
     await Promise.all(
       limited.map(async (src) => {
         if (siteRoot) {
-          const absolute = new URL(src, siteRoot);
-          const size = await this.fetcher.contentLength(absolute.toString());
-          if (size !== null) sizes.set(absolute.toString(), size);
+          try {
+            const absolute = new URL(src, siteRoot);
+            const size = await this.fetcher.contentLength(absolute.toString());
+            if (size !== null) sizes.set(absolute.toString(), size);
+          } catch {
+            // Ignore malformed image URLs; they do not invalidate the page audit.
+          }
           return;
         }
         // local folder: resolve the src against the page file's directory
-        const page = pageSignals.find((p) => p.images.some((img) => img.src === src));
-        if (page?.file && !/^[a-z][a-z0-9+.-]*:/i.test(src)) {
+        const page = pageSignals.find((p) =>
+          p.images.some((img) => img.src === src),
+        );
+        if (
+          page?.file &&
+          rootDir &&
+          !/^[a-z][a-z0-9+.-]*:/i.test(src)
+        ) {
           try {
-            const { stat } = await import('node:fs/promises');
-            const path = await import('node:path');
-            const file = path.resolve(path.dirname(page.file), decodeURIComponent(src.split('?')[0]));
+            const decoded = decodeURIComponent(src.split(/[?#]/, 1)[0]);
+            const base = src.startsWith('/') ? rootDir : path.dirname(page.file);
+            const file = path.resolve(base, decoded);
+            const relative = path.relative(rootDir, file);
+            if (
+              relative === '..' ||
+              relative.startsWith(`..${path.sep}`) ||
+              path.isAbsolute(relative)
+            ) {
+              return;
+            }
             const info = await stat(file);
-            sizes.set(src, info.size);
+            if (info.isFile()) sizes.set(src, info.size);
           } catch {
-            // image missing on disk or absolute URL: skip, do not invent a size
+            // Missing, malformed, or unreadable local images are not measured.
           }
         }
       }),

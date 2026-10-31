@@ -21,7 +21,8 @@
     "audit-demo": "pnpm exec ts-node scripts/audit-demo.ts",
     "audit-demo:tsx": "pnpm exec tsx scripts/audit-demo.ts",
     "audit": "pnpm exec ts-node scripts/audit-demo.ts",
-    "audit:tsx": "pnpm exec tsx scripts/audit-demo.ts"
+    "audit:tsx": "pnpm exec tsx scripts/audit-demo.ts",
+    "audit:cli": "pnpm exec ts-node src/cli/run-audit.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

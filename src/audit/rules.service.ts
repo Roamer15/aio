@@ -15,12 +15,17 @@ const HEAVY_IMAGE_BYTES = 300 * 1024;
 @Injectable()
 export class RulesService {
   apply(ctx: RuleContext): Finding[] {
-    return ctx.pages.flatMap((page) => this.applyToPage(ctx, page));
+    return ctx.pages.flatMap((page, index) =>
+      this.applyToPage(ctx, page, index === 0),
+    );
   }
 
-  private applyToPage(ctx: RuleContext, page: PageSignals): Finding[] {
+  private applyToPage(
+    ctx: RuleContext,
+    page: PageSignals,
+    firstPage: boolean,
+  ): Finding[] {
     const findings: Finding[] = [];
-    const at = page.file ?? page.pageUrl;
 
     const add = (
       rule: string,
@@ -32,9 +37,10 @@ export class RulesService {
         id: `${rule}:${page.pageUrl}`,
         rule,
         severity,
-        file: at,
+        file: page.file,
+        url: page.file ? undefined : page.pageUrl,
         evidence,
-        fixable,
+        fixable: fixable && page.file !== undefined,
       });
 
     if (!page.title) {
@@ -53,10 +59,12 @@ export class RulesService {
       );
     }
 
-    if (page.h1Count === 0) {
-      add(AuditRules.MissingH1, 'high', 'No <h1> heading found in the body.');
-    } else if (page.h1Count > 1) {
-      add(AuditRules.MissingH1, 'medium', `${page.h1Count} <h1> headings found on this page.`);
+    if (!page.isSpaShell) {
+      if (page.h1Count === 0) {
+        add(AuditRules.MissingH1, 'high', 'No <h1> heading found in the body.');
+      } else if (page.h1Count > 1) {
+        add(AuditRules.MissingH1, 'medium', `${page.h1Count} <h1> headings found on this page.`);
+      }
     }
 
     if (!page.canonical) {
@@ -71,15 +79,17 @@ export class RulesService {
       );
     }
 
-    if (!page.twitterTagCount.every(Boolean)) {
+    if (!page.twitterCardPresent) {
       add(
         AuditRules.MissingTwitterCard,
         'low',
-        'Incomplete twitter:* meta tags (expected twitter:name, twitter:description, twitter:image).',
+        'No <meta name="twitter:card"> found.',
       );
     }
 
-    const missingAlt = page.images.filter((img) => img.alt === null);
+    const missingAlt = page.isSpaShell
+      ? []
+      : page.images.filter((img) => img.alt === null);
     if (missingAlt.length > 0) {
       add(
         AuditRules.MissingAltText,
@@ -88,22 +98,20 @@ export class RulesService {
       );
     }
 
-    if (!page.robotsMetaPresent && !ctx.site.robotsTxtPresent) {
-      add(AuditRules.MissingRobots, 'low', 'No <meta name="robots"> tag and no robots.txt found.');
+    const langs = new Set(
+      page.hreflangLangs.map((lang) => lang.toLowerCase().split('-')[0]),
+    );
+    const targetLangs = [...new Set(ctx.languages)];
+    const missingLangs = targetLangs.filter((lang) => !langs.has(lang));
+    if (targetLangs.length > 1 && missingLangs.length > 0) {
+      add(
+        AuditRules.MissingHreflang,
+        'medium',
+        `No hreflang alternate for: ${missingLangs.join(', ')} (site targets ${targetLangs.join(' and ')}).`,
+      );
     }
 
-    const langs = new Set(page.hreflangLangs);
-    for (const lang of ctx.languages) {
-      if (!langs.has(lang)) {
-        add(
-          AuditRules.MissingHreflang,
-          'medium',
-          `No hreflang "${lang}" alternate link found while the site targets ${ctx.languages.join(' and ')}.`,
-        );
-      }
-    }
-
-    if (ctx.imageSizes) {
+    if (firstPage && ctx.imageSizes) {
       const heavy = [...ctx.imageSizes.entries()].filter(([, size]) => size > HEAVY_IMAGE_BYTES);
       if (heavy.length > 0) {
         const first = heavy[0];
@@ -119,19 +127,19 @@ export class RulesService {
   }
 
   /** Site-wide rules, checked once after pages are audited (robots.txt, sitemap.xml). */
-  applySiteRules(ctx: RuleContext, findings: Finding[], rootAt: string): void {
-    if (
-      !ctx.site.robotsTxtPresent &&
-      ctx.pages.every((p) => !p.robotsMetaPresent) &&
-      !findings.some((f) => f.rule === AuditRules.MissingRobots)
-    ) {
+  applySiteRules(
+    ctx: RuleContext,
+    findings: Finding[],
+    location: { file?: string; url?: string },
+  ): void {
+    if (!ctx.site.robotsTxtPresent) {
       findings.push({
         id: `${AuditRules.MissingRobots}:site`,
         rule: AuditRules.MissingRobots,
         severity: 'low',
-        file: rootAt,
+        ...location,
         evidence: 'robots.txt not found at the site root.',
-        fixable: true,
+        fixable: location.file !== undefined,
       });
     }
     if (!ctx.site.sitemapPresent) {
@@ -139,9 +147,9 @@ export class RulesService {
         id: `${AuditRules.MissingSitemap}:site`,
         rule: AuditRules.MissingSitemap,
         severity: 'medium',
-        file: rootAt,
+        ...location,
         evidence: 'sitemap.xml not found at the site root.',
-        fixable: true,
+        fixable: location.file !== undefined,
       });
     }
   }

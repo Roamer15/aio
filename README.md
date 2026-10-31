@@ -33,6 +33,17 @@ It targets two hackathon categories: **Best Open-Source AI Project** and **Best 
 - ✅ **JSON-LD only from confirmed facts.** Structured data is generated exclusively from `business.json`.
 - ✅ **Safe crawling.** Local/private addresses are blocked (SSRF protection) and page count is limited.
 
+### Run an audit
+
+The CLI audits one remote URL or up to 50 HTML files in a local project folder.
+Only pass languages when the site's targets are known; `hreflang` is checked
+only when more than one language is supplied.
+
+```bash
+pnpm run audit:cli -- ./path/to/site fr,en
+pnpm run audit:cli -- https://example.com
+```
+
 ---
 
 ## ✨ Features
