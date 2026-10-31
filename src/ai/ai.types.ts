@@ -28,3 +28,39 @@ export interface MetaSuggestion {
     alt: string;
   }>;
 }
+
+export interface LocalBusinessJsonLd {
+  '@context': 'https://schema.org';
+  '@type': 'LocalBusiness';
+  name: string;
+  address: {
+    '@type': 'PostalAddress';
+    addressLocality: string;
+    streetAddress?: string;
+  };
+  telephone?: string;
+}
+
+export type FindingSeverity = 'high' | 'medium' | 'low';
+
+export interface FindingForPrioritization {
+  id: string;
+  rule: string;
+  severity: FindingSeverity;
+  file?: string;
+  url?: string;
+  evidence: string;
+  fixable: boolean;
+}
+
+export interface PrioritizeFindingsInput {
+  language: ContentLanguage;
+  findings: FindingForPrioritization[];
+}
+
+export interface FindingPriority {
+  findingId: string;
+  rank: number;
+  rationale: string;
+  source: 'ai-suggestion';
+}
