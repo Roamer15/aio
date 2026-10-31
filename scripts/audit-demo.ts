@@ -14,17 +14,13 @@ async function main() {
 
   console.log(`🚀 Starting LocalSEO AI audit on: ${folderPath}\n`);
 
+  let app: Awaited<ReturnType<typeof NestFactory.createApplicationContext>> | undefined;
   try {
-    // Create an application context (instead of full NestFactory)
-    const app = await NestFactory.createApplicationContext(AuditModule);
-
-    // Get the AuditService from the context
+    app = await NestFactory.createApplicationContext(AuditModule);
     const auditService = app.get(AuditService);
 
-    // Run the audit on the specified folder
     const result = await auditService.audit({ folder: folderPath, languages: ['fr', 'en'] });
 
-    // Print the results
     console.log('📊 AUDIT RESULTS');
     console.log('=' .repeat(50));
     console.log(`Target: ${folderPath}`);
@@ -46,7 +42,6 @@ async function main() {
       });
     }
 
-    // Print summary statistics
     const highCount = result.findings.filter(f => f.severity === 'high').length;
     const mediumCount = result.findings.filter(f => f.severity === 'medium').length;
     const lowCount = result.findings.filter(f => f.severity === 'low').length;
@@ -58,10 +53,11 @@ async function main() {
     console.log(`Medium severity: ${mediumCount}`);
     console.log(`Low severity: ${lowCount}`);
     console.log('\n');
-
   } catch (error) {
     console.error('❌ Error running audit:', error instanceof Error ? error.message : String(error));
-    process.exit(1);
+    process.exitCode = 1;
+  } finally {
+    await app?.close();
   }
 }
 
