@@ -40,6 +40,7 @@ async function runAudit(target: string, languages: ('fr' | 'en')[]): Promise<voi
 
 async function main() {
   const args = process.argv.slice(2);
+  if (args[0] === '--') args.shift();
   const target = args[0];
 
   if (!target) {
