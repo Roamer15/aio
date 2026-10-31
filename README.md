@@ -1,98 +1,189 @@
+# LocalSEO AI
+
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <strong>An open-source AI agent that audits, fixes and verifies SEO — built for Cameroon.</strong><br/>
+  Hacktoberfest Yaoundé x Modulis · October 31, 2026
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> 🇫🇷 Version française plus bas — [voir « À propos du projet »](#-à-propos-du-projet).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🇬🇧 About the project
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**LocalSEO AI** is an open-source AI agent that:
 
-## Project setup
+1. **Audits** a website (a remote URL or a local project folder),
+2. **Fixes** the SEO problems directly in the code — *only after the user validates a diff*,
+3. **Re-audits** to verify that the score actually improved.
 
-```bash
-$ pnpm install
+It is designed around the realities of Cameroonian developers:
+
+- **Bilingual websites** (French / English, with `hreflang` tags),
+- **WhatsApp-first** link sharing (Open Graph previews),
+- **Expensive mobile data** (page-weight rules are first-class citizens).
+
+It targets two hackathon categories: **Best Open-Source AI Project** and **Best Use of Gemma 4** — all generated text comes from **Gemma 4 via the Gemini API**.
+
+### Core principles
+
+- ✅ **Measured, not invented.** Every metric comes from a deterministic tool. The model never invents data.
+- ✅ **Traceable data.** Every piece of information is labelled `measured`, `client` or `ai-suggestion`.
+- ✅ **Nothing is modified without approval.** Diff → explicit validation → changes applied on a Git branch, with a restore point.
+- ✅ **JSON-LD only from confirmed facts.** Structured data is generated exclusively from `business.json`.
+- ✅ **Safe crawling.** Local/private addresses are blocked (SSRF protection) and page count is limited.
+
+---
+
+## ✨ Features
+
+**P0 — the fix loop:**
+
+| Feature | Description |
+|---|---|
+| Audit | Detect missing/broken: `title`, meta description, `H1`, canonical, Open Graph & Twitter cards, alt texts, robots, sitemap, `hreflang`, image weight |
+| Report | Indicative score + findings, each with its evidence (file or URL) |
+| Generation | Titles, descriptions and alt texts written by Gemma 4 from page content + `business.json` |
+| JSON-LD | `LocalBusiness` structured data generated from confirmed information only |
+| AutoFix | Diff → validation → applied on a Git branch → new audit |
+| MCP server | Tools exposed to any code agent |
+
+**P1 — if time allows:** WhatsApp link preview, HTML report export.
+
+---
+
+## 🏗️ Architecture
+
+```
+CLI / MCP server → AuditModule → AiModule (Gemma 4) → FixModule (diff + Git)
+                        ↓                                            ↓
+                     report ←──────── re-audit (verify) ←────────────┘
 ```
 
-## Compile and run the project
+| Module | Role |
+|---|---|
+| `AuditModule` | Reads the project, extracts tags, audit rules, score |
+| `AiModule` | Calls Gemma 4 via the Gemini API: text, prioritisation, JSON-LD |
+| `FixModule` | Creates the diff, validation, Git branch, restore |
+| `McpModule` / `CliModule` | Exposes the tools, demo commands |
+| `ReportModule` | Before/after report |
+| `shared` | Common types and contracts |
+
+### MCP tools
+
+| Tool | Role |
+|---|---|
+| `audit_project` | Analyse a folder or URL and return an `AuditResult` |
+| `generate_meta` | Ask Gemma for titles, descriptions and alt texts (FR or EN) |
+| `propose_fixes` | Prepare diffs for the findings |
+| `apply_fix` | Apply a validated diff on a Git branch |
+
+---
+
+## 🚀 Getting started
 
 ```bash
-# development
-$ pnpm run start
+# install
+pnpm install
 
-# watch mode
-$ pnpm run start:dev
+# configure
+cp .env.example .env
+# → add your Gemini API key for Gemma 4 access
 
-# production mode
-$ pnpm run start:prod
+# run the CLI (dev mode)
+pnpm run start:dev
 ```
 
-## Run tests
+### `business.json`
+
+All generated content is anchored to confirmed business information:
+
+```json
+{
+  "name": "Hôtel du Littoral",
+  "city": "Kribi",
+  "phone": "+237 6 99 00 00 00",
+  "address": "Confirmed street address"
+}
+```
+
+### Environment variables
+
+API keys live in `.env` (never committed). A `.env.example` documents the required keys.
+
+---
+
+## 🎬 Demo scenario (2 minutes)
+
+1. The deliberately-bad test site (a hotel in Kribi) and its low initial score.
+2. One command / MCP call: *“audit and fix this site — change nothing before my validation.”*
+3. Findings are displayed with their evidence.
+4. Gemma writes the missing content; the agent shows the diff.
+5. The user validates; changes are applied on a Git branch.
+6. New audit: the score goes up. Git restore is always possible.
+
+---
+
+## 🗺️ Tech stack
+
+- **NestJS + TypeScript** — HTTP client + HTML parsing for crawling (no headless browser needed for the demo)
+- **Gemma 4 via Gemini API** — content generation and prioritisation
+- **JSON files + Git** — no database required
+- **Model Context Protocol (MCP)** — agent integration
+
+---
+
+## 🤝 Contributing
+
+- One file = one owner. Ask before touching someone else's file.
+- Work on `feature/audit`, `feature/ai` or `feature/demo` branches; merge to `main` frequently.
+- Keys go in `.env` — never commit them; update `.env.example` instead.
+
+## 🆓 License
+
+Released under the [MIT License](LICENSE) — © 2026 AIO.
+
+---
+
+---
+
+
+# 🇫🇷 À propos du projet
+
+**LocalSEO AI** est un agent IA open source qui :
+
+1. **Audite** un site web (URL distante ou dossier de projet local),
+2. **Corrige** les problèmes de référencement directement dans le code — *après validation du diff par l'utilisateur*,
+3. **Ré-audite** pour vérifier que le score s'est réellement amélioré.
+
+Il est conçu pour les développeurs camerounais :
+
+- **Sites bilingues** (français / anglais, balises `hreflang`),
+- **Partage de liens sur WhatsApp** (aperçus Open Graph),
+- **Données mobiles coûteuses** (le poids des pages est une règle de premier plan).
+
+Catégories visées : **Best Open-Source AI Project** et **Best Use of Gemma 4** — tout le contenu généré provient de **Gemma 4 via l'API Gemini**.
+
+### Principes fondamentaux
+
+- ✅ **Mesuré, jamais inventé.** Chaque métrique provient d'un outil déterministe.
+- ✅ **Données traçables.** Chaque information est étiquetée `measured`, `client` ou `ai-suggestion`.
+- ✅ **Rien n'est modifié sans validation.** Diff → validation explicite → application sur une branche Git, avec point de restauration.
+- ✅ **JSON-LD uniquement à partir de faits confirmés.** Généré exclusivement depuis `business.json`.
+- ✅ **Exploration sécurisée.** Blocage des adresses locales/privées (SSRF) et limite du nombre de pages.
+
+### Contenu généré (F04 — P0)
+
+Titres, descriptions et textes alternatifs rédigés par Gemma 4 à partir du contenu de la page et de `business.json`, en français ou en anglais ; données structurées `LocalBusiness` (JSON-LD) à partir d'informations confirmées.
+
+### Démarrage rapide
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm install
+cp .env.example .env   # clé API Gemini pour Gemma 4
+pnpm run start:dev
 ```
 
-## Deployment
+### Licence
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Publié sous [licence MIT](LICENSE) — © 2026 AIO.
