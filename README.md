@@ -211,6 +211,17 @@ pnpm run start:dev
 
 Le service et ses tests se trouvent dans `src/ai/`. Les tests unitaires simulent Gemini et ne nécessitent ni clé API ni accès réseau. L’identifiant exact du modèle Gemma 4 reste à confirmer ; ne pas supposer qu’un identifiant Gemini désigne Gemma.
 
+Pour lancer le test réel, configure `GEMINI_API_KEY` et `GEMINI_MODEL` dans `.env`, puis exécute explicitement le test d’intégration :
+
+```bash
+set -a
+source .env
+set +a
+RUN_GEMINI_INTEGRATION_TESTS=1 pnpm exec jest --runInBand --runTestsByPath src/ai/ai.integration.spec.ts
+```
+
+Ce test est ignoré dans la suite normale et n’effectue un appel externe qu’avec `RUN_GEMINI_INTEGRATION_TESTS=1`.
+
 ### Licence
 
 Publié sous [licence MIT](LICENSE) — © 2026 AIO.
