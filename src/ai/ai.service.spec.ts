@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   InternalServerErrorException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { AiService } from './ai.service';
@@ -103,6 +104,26 @@ describe('AiService', () => {
     await expect(
       service.generateMeta({ ...input, pageContent: '  ' }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockGenerateContent).not.toHaveBeenCalled();
+  });
+
+  it('fails clearly when the API key is missing', async () => {
+    delete process.env.GEMINI_API_KEY;
+    const service = new AiService();
+
+    await expect(service.generateMeta(input)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(GoogleGenAI).not.toHaveBeenCalled();
+  });
+
+  it('fails clearly when the model is missing without calling Gemini', async () => {
+    delete process.env.GEMINI_MODEL;
+    const service = new AiService();
+
+    await expect(service.generateMeta(input)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
     expect(mockGenerateContent).not.toHaveBeenCalled();
   });
 

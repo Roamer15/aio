@@ -109,7 +109,24 @@ All generated content is anchored to confirmed business information:
 
 ### Environment variables
 
-API keys live in `.env` (never committed). A `.env.example` documents the required keys.
+The app loads `.env` through NestJS configuration. Copy `.env.example` to `.env`, then set the API key and a model ID enabled for that key. Never commit `.env`.
+
+```dotenv
+GEMINI_API_KEY=your-key
+GEMINI_MODEL=your-enabled-model-id
+```
+
+The exact Gemma 4 model ID still needs confirmation; do not assume that a Gemini model ID is a Gemma model ID.
+
+### AI module
+
+`AiModule` is imported by `AppModule` and exports `AiService` for NestJS adapters. A future CLI or MCP module should import `AiModule` and inject `AiService`.
+
+- `generateMeta` returns title, description and alt-text suggestions in French or English.
+- `generateLocalBusinessJsonLd` builds `LocalBusiness` JSON-LD only from supplied business fields; it does not call the model.
+- `prioritizeFindings` suggests an order and rationale without changing measured severity or evidence. Its results are marked `ai-suggestion`.
+
+The service and tests are under `src/ai/`. Unit tests mock Gemini and do not require a key or network access.
 
 ---
 
@@ -183,6 +200,16 @@ pnpm install
 cp .env.example .env   # clé API Gemini pour Gemma 4
 pnpm run start:dev
 ```
+
+### Module IA
+
+`AiModule` est importé par `AppModule` et exporte `AiService` pour les adaptateurs NestJS. Un futur module CLI ou MCP devra importer `AiModule` et injecter `AiService`.
+
+- `generateMeta` renvoie des suggestions de titre, description et textes alternatifs en français ou en anglais.
+- `generateLocalBusinessJsonLd` construit le JSON-LD `LocalBusiness` uniquement à partir des champs fournis sur l'entreprise, sans appel au modèle.
+- `prioritizeFindings` suggère un ordre et une justification sans modifier la sévérité ni les preuves mesurées. Les résultats portent la source `ai-suggestion`.
+
+Le service et ses tests se trouvent dans `src/ai/`. Les tests unitaires simulent Gemini et ne nécessitent ni clé API ni accès réseau. L’identifiant exact du modèle Gemma 4 reste à confirmer ; ne pas supposer qu’un identifiant Gemini désigne Gemma.
 
 ### Licence
 
