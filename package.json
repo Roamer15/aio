@@ -18,8 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "audit": "node dist/cli/run-audit.js",
-    "audit:dev": "ts-node src/cli/run-audit.ts"
+    "audit-demo": "pnpm exec ts-node scripts/audit-demo.ts",
+    "audit-demo:tsx": "pnpm exec tsx scripts/audit-demo.ts",
+    "audit": "pnpm exec ts-node scripts/audit-demo.ts",
+    "audit:tsx": "pnpm exec tsx scripts/audit-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
