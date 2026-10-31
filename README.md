@@ -118,6 +118,8 @@ GEMINI_MODEL=your-enabled-model-id
 
 The exact Gemma 4 model ID still needs confirmation; do not assume that a Gemini model ID is a Gemma model ID.
 
+For a real API smoke test, run `pnpm run test:gemini`. This sends one request using the `.env` settings and may consume API quota. It runs in Node directly, outside Jest.
+
 ### AI module
 
 `AiModule` is imported by `AppModule` and exports `AiService` for NestJS adapters. A future CLI or MCP module should import `AiModule` and inject `AiService`.
@@ -211,16 +213,11 @@ pnpm run start:dev
 
 Le service et ses tests se trouvent dans `src/ai/`. Les tests unitaires simulent Gemini et ne nécessitent ni clé API ni accès réseau. L’identifiant exact du modèle Gemma 4 reste à confirmer ; ne pas supposer qu’un identifiant Gemini désigne Gemma.
 
-Pour lancer le test réel, configure `GEMINI_API_KEY` et `GEMINI_MODEL` dans `.env`, puis exécute explicitement le test d’intégration :
+Pour lancer un test réel, configure `GEMINI_API_KEY` et `GEMINI_MODEL` dans `.env`, puis exécute cette commande. Elle envoie une requête à l’API et peut consommer du quota ; elle utilise Node directement, pas le sandbox Jest :
 
 ```bash
-set -a
-source .env
-set +a
-RUN_GEMINI_INTEGRATION_TESTS=1 pnpm exec jest --runInBand --runTestsByPath src/ai/ai.integration.spec.ts
+pnpm run test:gemini
 ```
-
-Ce test est ignoré dans la suite normale et n’effectue un appel externe qu’avec `RUN_GEMINI_INTEGRATION_TESTS=1`.
 
 ### Licence
 
