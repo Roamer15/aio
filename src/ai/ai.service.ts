@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
 import { createHash } from 'node:crypto';
+import { Finding } from '../shared';
 import {
-  FindingForPrioritization,
   FindingPriority,
   GenerateMetaInput,
   LocalBusinessJsonLd,
@@ -34,31 +34,28 @@ export class AiService {
   generateLocalBusinessJsonLd(
     business: GenerateMetaInput['business'],
   ): LocalBusinessJsonLd {
-    if (!business.name.trim() || !business.city.trim()) {
+    if (
+      !business.name.trim() ||
+      !business.city.trim() ||
+      !business.phone.trim() ||
+      !business.address.trim()
+    ) {
       throw new BadRequestException(
-        'Business name and city must be provided for JSON-LD.',
+        'Business name, city, phone, and confirmed address must be provided for JSON-LD.',
       );
     }
 
-    const address: LocalBusinessJsonLd['address'] = {
-      '@type': 'PostalAddress',
-      addressLocality: business.city.trim(),
-    };
-    if (business.address?.trim()) {
-      address.streetAddress = business.address.trim();
-    }
-
-    const jsonLd: LocalBusinessJsonLd = {
+    return {
       '@context': 'https://schema.org',
       '@type': 'LocalBusiness',
       name: business.name.trim(),
-      address,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: business.city.trim(),
+        streetAddress: business.address.trim(),
+      },
+      telephone: business.phone.trim(),
     };
-    if (business.phone?.trim()) {
-      jsonLd.telephone = business.phone.trim();
-    }
-
-    return jsonLd;
   }
 
   async prioritizeFindings(
@@ -239,7 +236,7 @@ export class AiService {
 
   private parsePriorities(
     responseText: string,
-    findings: FindingForPrioritization[],
+    findings: Finding[],
   ): FindingPriority[] {
     let parsed: unknown;
     try {

@@ -10,7 +10,12 @@ describeGeminiIntegration('Gemini API integration', () => {
       language: 'fr',
       pageTitle: 'Hôtel du Littoral',
       pageContent: 'Hôtel du Littoral est un établissement situé à Kribi.',
-      business: { name: 'Hôtel du Littoral', city: 'Kribi' },
+      business: {
+        name: 'Hôtel du Littoral',
+        city: 'Kribi',
+        phone: '+237699000000',
+        address: 'Avenue de la Plage, Kribi',
+      },
     });
 
     expect(result.title.trim()).not.toBe('');

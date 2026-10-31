@@ -1,11 +1,6 @@
-export type ContentLanguage = 'fr' | 'en';
+import type { BusinessInfo, Finding } from '../shared';
 
-export interface BusinessContext {
-  name: string;
-  city: string;
-  phone?: string;
-  address?: string;
-}
+export type ContentLanguage = 'fr' | 'en';
 
 export interface PageImage {
   src: string;
@@ -16,7 +11,7 @@ export interface GenerateMetaInput {
   language: ContentLanguage;
   pageTitle?: string;
   pageContent: string;
-  business: BusinessContext;
+  business: BusinessInfo;
   images?: PageImage[];
 }
 
@@ -37,26 +32,14 @@ export interface LocalBusinessJsonLd {
   address: {
     '@type': 'PostalAddress';
     addressLocality: string;
-    streetAddress?: string;
+    streetAddress: string;
   };
-  telephone?: string;
-}
-
-export type FindingSeverity = 'high' | 'medium' | 'low';
-
-export interface FindingForPrioritization {
-  id: string;
-  rule: string;
-  severity: FindingSeverity;
-  file?: string;
-  url?: string;
-  evidence: string;
-  fixable: boolean;
+  telephone: string;
 }
 
 export interface PrioritizeFindingsInput {
   language: ContentLanguage;
-  findings: FindingForPrioritization[];
+  findings: Finding[];
 }
 
 export interface FindingPriority {

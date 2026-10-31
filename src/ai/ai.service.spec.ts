@@ -4,8 +4,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { GoogleGenAI } from '@google/genai';
+import { Finding } from '../shared';
 import { AiService } from './ai.service';
-import { FindingForPrioritization, GenerateMetaInput } from './ai.types';
+import { GenerateMetaInput } from './ai.types';
 
 interface MockGenerateContentRequest {
   model: string;
@@ -29,10 +30,15 @@ describe('AiService', () => {
     language: 'fr',
     pageTitle: 'Accueil',
     pageContent: 'Un hôtel situé à Kribi.',
-    business: { name: 'Hôtel du Littoral', city: 'Kribi' },
+    business: {
+      name: 'Hôtel du Littoral',
+      city: 'Kribi',
+      phone: '+237699000000',
+      address: 'Avenue de la Plage, Kribi',
+    },
     images: [{ src: '/hotel.jpg', context: 'Façade de l’hôtel' }],
   };
-  const findings: FindingForPrioritization[] = [
+  const findings: Finding[] = [
     {
       id: 'missing-title',
       rule: 'missing-title',
@@ -177,7 +183,9 @@ describe('AiService', () => {
       address: {
         '@type': 'PostalAddress',
         addressLocality: 'Kribi',
+        streetAddress: 'Avenue de la Plage, Kribi',
       },
+      telephone: '+237699000000',
     });
     expect(mockGenerateContent).not.toHaveBeenCalled();
   });
