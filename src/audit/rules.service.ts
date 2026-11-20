@@ -44,13 +44,25 @@ export class RulesService {
       });
 
     if (!page.title) {
-      add(AuditRules.MissingTitle, 'high', 'No <title> element found in <head>.');
+      add(
+        AuditRules.MissingTitle,
+        'high',
+        'No <title> element found in <head>.',
+      );
     } else if (page.title.length < 15) {
-      add(AuditRules.MissingTitle, 'medium', `Title is only ${page.title.length} characters: "${page.title}".`);
+      add(
+        AuditRules.MissingTitle,
+        'medium',
+        `Title is only ${page.title.length} characters: "${page.title}".`,
+      );
     }
 
     if (!page.metaDescription) {
-      add(AuditRules.MissingMetaDescription, 'high', 'No <meta name="description"> found.');
+      add(
+        AuditRules.MissingMetaDescription,
+        'high',
+        'No <meta name="description"> found.',
+      );
     } else if (page.metaDescription.length < 50) {
       add(
         AuditRules.MissingMetaDescription,
@@ -63,12 +75,20 @@ export class RulesService {
       if (page.h1Count === 0) {
         add(AuditRules.MissingH1, 'high', 'No <h1> heading found in the body.');
       } else if (page.h1Count > 1) {
-        add(AuditRules.MissingH1, 'medium', `${page.h1Count} <h1> headings found on this page.`);
+        add(
+          AuditRules.MissingH1,
+          'medium',
+          `${page.h1Count} <h1> headings found on this page.`,
+        );
       }
     }
 
     if (!page.canonical) {
-      add(AuditRules.MissingCanonical, 'medium', 'No <link rel="canonical"> found.');
+      add(
+        AuditRules.MissingCanonical,
+        'medium',
+        'No <link rel="canonical"> found.',
+      );
     }
 
     if (!page.openGraphComplete) {
@@ -94,7 +114,7 @@ export class RulesService {
       add(
         AuditRules.MissingAltText,
         'medium',
-        `${missingAlt.length} of ${page.images.length} images have no alt attribute (first: ${missingAlt[0].src || '<empty src>' }).`,
+        `${missingAlt.length} of ${page.images.length} images have no alt attribute (first: ${missingAlt[0].src || '<empty src>'}).`,
       );
     }
 
@@ -112,7 +132,9 @@ export class RulesService {
     }
 
     if (firstPage && ctx.imageSizes) {
-      const heavy = [...ctx.imageSizes.entries()].filter(([, size]) => size > HEAVY_IMAGE_BYTES);
+      const heavy = [...ctx.imageSizes.entries()].filter(
+        ([, size]) => size > HEAVY_IMAGE_BYTES,
+      );
       if (heavy.length > 0) {
         const first = heavy[0];
         add(

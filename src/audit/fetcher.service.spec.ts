@@ -18,7 +18,15 @@ describe('FetcherService', () => {
   });
 
   it('skips generated and dependency directories and returns the project root', async () => {
-    for (const directory of ['node_modules', '.git', 'dist', 'build', 'out', '.next', 'coverage']) {
+    for (const directory of [
+      'node_modules',
+      '.git',
+      'dist',
+      'build',
+      'out',
+      '.next',
+      'coverage',
+    ]) {
       const ignored = path.join(rootDir, directory);
       await mkdir(ignored);
       await writeFile(path.join(ignored, 'ignored.html'), '<h1>Ignored</h1>');
@@ -34,16 +42,16 @@ describe('FetcherService', () => {
   });
 
   it('blocks redirects to private addresses before making the redirected request', async () => {
-    const request = jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(
-        new Response(null, {
-          status: 302,
-          headers: { location: 'http://127.0.0.1/private' },
-        }),
-      );
+    const request = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'http://127.0.0.1/private' },
+      }),
+    );
 
-    await expect(fetcher.contentLength('http://8.8.8.8/image.jpg')).resolves.toBeNull();
+    await expect(
+      fetcher.contentLength('http://8.8.8.8/image.jpg'),
+    ).resolves.toBeNull();
 
     expect(request).toHaveBeenCalledTimes(1);
   });
@@ -69,9 +77,9 @@ describe('FetcherService', () => {
   });
 
   it('caps remote response bodies', async () => {
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(new Uint8Array(5 * 1024 * 1024 + 1)),
-    );
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(new Uint8Array(5 * 1024 * 1024 + 1)));
 
     await expect(
       fetcher.loadPages({ url: 'http://8.8.8.8/large' }),

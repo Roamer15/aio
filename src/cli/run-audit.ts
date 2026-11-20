@@ -4,7 +4,10 @@ import { NestFactory } from '@nestjs/core';
 import { AuditModule } from '../audit/audit.module';
 import { AuditService } from '../audit/audit.service';
 
-async function runAudit(target: string, languages: ('fr' | 'en')[]): Promise<void> {
+async function runAudit(
+  target: string,
+  languages: ('fr' | 'en')[],
+): Promise<void> {
   const app = await NestFactory.createApplicationContext(AuditModule);
   try {
     const auditService = app.get(AuditService);
@@ -24,7 +27,8 @@ async function runAudit(target: string, languages: ('fr' | 'en')[]): Promise<voi
     } else {
       console.log(`   🚨 ${findings.length} issue(s):\n`);
       findings.forEach((f, i) => {
-        const icon = f.severity === 'high' ? '🔴' : f.severity === 'medium' ? '🟡' : '🟢';
+        const icon =
+          f.severity === 'high' ? '🔴' : f.severity === 'medium' ? '🟡' : '🟢';
         console.log(`   ${i + 1}. ${icon} ${f.rule}`);
         console.log(`      ${f.evidence}`);
         const location = f.file ?? f.url;
@@ -44,9 +48,13 @@ async function main() {
   const target = args[0];
 
   if (!target) {
-    console.error('Usage: npx ts-node src/cli/run-audit.ts <target> [languages]');
+    console.error(
+      'Usage: npx ts-node src/cli/run-audit.ts <target> [languages]',
+    );
     console.error('Example: npx ts-node src/cli/run-audit.ts ./site fr,en');
-    console.error('Example: npx ts-node src/cli/run-audit.ts https://example.com fr,en');
+    console.error(
+      'Example: npx ts-node src/cli/run-audit.ts https://example.com fr,en',
+    );
     process.exit(1);
   }
 

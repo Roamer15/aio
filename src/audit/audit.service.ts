@@ -52,7 +52,11 @@ export class AuditService {
     const site: SiteSignals = siteRoot
       ? await this.fetchSiteSignals(siteRoot)
       : await this.fetchFolderSiteSignals(rootDir);
-    const imageSizes = await this.measureImageSizes(pageSignals, siteRoot, rootDir);
+    const imageSizes = await this.measureImageSizes(
+      pageSignals,
+      siteRoot,
+      rootDir,
+    );
     const findings = this.rules.apply({
       pages: pageSignals,
       site,
@@ -89,9 +93,7 @@ export class AuditService {
     };
   }
 
-  private async fetchFolderSiteSignals(
-    rootDir?: string,
-  ): Promise<SiteSignals> {
+  private async fetchFolderSiteSignals(rootDir?: string): Promise<SiteSignals> {
     if (!rootDir) return { robotsTxtPresent: false, sitemapPresent: false };
     const has = async (name: string) =>
       (
@@ -133,7 +135,7 @@ export class AuditService {
             const size = await this.fetcher.contentLength(absolute.toString());
             if (size !== null) sizes.set(absolute.toString(), size);
           } catch {
-            // Ignore malformed image URLs; they do not invalidate the page audit.
+            //I'll add something at some point
           }
           return;
         }
@@ -141,14 +143,12 @@ export class AuditService {
         const page = pageSignals.find((p) =>
           p.images.some((img) => img.src === src),
         );
-        if (
-          page?.file &&
-          rootDir &&
-          !/^[a-z][a-z0-9+.-]*:/i.test(src)
-        ) {
+        if (page?.file && rootDir && !/^[a-z][a-z0-9+.-]*:/i.test(src)) {
           try {
             const decoded = decodeURIComponent(src.split(/[?#]/, 1)[0]);
-            const base = src.startsWith('/') ? rootDir : path.dirname(page.file);
+            const base = src.startsWith('/')
+              ? rootDir
+              : path.dirname(page.file);
             const file = path.resolve(base, decoded);
             const relative = path.relative(rootDir, file);
             if (

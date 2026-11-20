@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import type { LoadedPage } from './fetcher.service';
 
-/** Per-page on-page signals, extracted with a deterministic parser (never the model). */
+/** Per-page on-page signals, extracted with a deterministic parser. */
 export interface PageSignals {
   pageUrl: string;
   file?: string;
@@ -37,19 +37,24 @@ export class ExtractorService {
       pageUrl: page.url,
       file: page.file,
       title: $('head title').text().trim() || undefined,
-      metaDescription: $('meta[name="description"]').attr('content')?.trim() || undefined,
+      metaDescription:
+        $('meta[name="description"]').attr('content')?.trim() || undefined,
       h1Count: $('h1').length,
       canonical: $('link[rel="canonical"]').attr('href')?.trim() || undefined,
       openGraphComplete: og.every((p) => $(`meta[property="${p}"]`).length > 0),
       ogTagCount: $('meta[property^="og:"]').length,
       twitterCardPresent: $('meta[name="twitter:card"]').length > 0,
-      hreflangLangs: $('link[rel="alternate"][hreflang]').map((_, el) => $(el).attr('hreflang') ?? '').get(),
+      hreflangLangs: $('link[rel="alternate"][hreflang]')
+        .map((_, el) => $(el).attr('hreflang') ?? '')
+        .get(),
       htmlLang: $('html').attr('lang')?.trim() || undefined,
       isSpaShell: appRoot.length > 0 && appRoot.children().length === 0,
-      images: $('img').map((_, el) => ({
-        src: $(el).attr('src')?.trim() ?? '',
-        alt: $(el).attr('alt') ?? null,
-      })).get(),
+      images: $('img')
+        .map((_, el) => ({
+          src: $(el).attr('src')?.trim() ?? '',
+          alt: $(el).attr('alt') ?? null,
+        }))
+        .get(),
     };
   }
 }
